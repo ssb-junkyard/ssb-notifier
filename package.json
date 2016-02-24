@@ -1,6 +1,6 @@
 {
   "name": "ssb-notifier",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "desktop notifications for ssb/patchwork",
   "main": "notify.js",
   "bin": "server.js",
