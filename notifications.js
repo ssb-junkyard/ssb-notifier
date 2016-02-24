@@ -156,12 +156,11 @@ module.exports = function (sbot, myId) {
       if (!c) return cb()
 
       if (msg.value.author === myId) {
-        // update our name or image for someone
         if (c.type == 'about') {
-          if (c.name)
-            names[c.about] = c.name
-          if (c.image)
-            images[c.about] = c.image
+          // update our name or image for someone
+          var info = about[c.about] || (about[c.about] = {})
+          if (c.name) info.name = c.name
+          if (c.image) info.image = c.image
         }
         return cb()
       }
