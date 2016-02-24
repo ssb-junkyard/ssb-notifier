@@ -81,7 +81,7 @@ module.exports = function (sbot, id) {
               if (root && root.author === id)
                 subject = 'your thread'
               else if (branch && branch.author === id)
-                subject = 'your thread'
+                subject = 'your post'
               else
                 return cb()
               var author = getName(msg.value.author)
