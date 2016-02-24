@@ -1,4 +1,4 @@
-# ssb-desktop-notify
+# ssb-notifier
 
 Desktop notifications for ssb/patchwork. Generates notifications on mentions,
 digs, private messages, and follows.
@@ -6,13 +6,13 @@ digs, private messages, and follows.
 ## Install
 
 ```
-npm install -g ssb-desktop-notify
+npm install -g ssb-notifier
 ```
 
 ## Usage
 
-```
-ssb-desktop-notify &
+```sh
+ssb-notifier &
 ```
 
 ## License

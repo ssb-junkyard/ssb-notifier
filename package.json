@@ -1,17 +1,17 @@
 {
-  "name": "ssb-desktop-notify",
+  "name": "ssb-notifier",
   "version": "0.0.0",
   "description": "desktop notifications for ssb/patchwork",
   "main": "notify.js",
   "bin": "server.js",
   "repository": {
     "type": "git",
-    "url": "git://github.com/clehner/ssb-desktop-notify"
+    "url": "git://github.com/clehner/ssb-notifier"
   },
   "author": "Charles Lehner (http://celehner.com/)",
   "license": "Fair",
   "bugs": {
-    "url": "https://github.com/clehner/ssb-desktop-notify/issues"
+    "url": "https://github.com/clehner/ssb-notifier/issues"
   },
   "dependencies": {
     "node-notifier": "^4.5.0",
