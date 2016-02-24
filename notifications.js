@@ -173,7 +173,7 @@ module.exports = function (sbot, myId) {
             return getAboutCached(msg.value.author, function (err, about) {
               cb(err, {
                 icon: about.image,
-                title: about.name + ' mentioned you in ',
+                title: about.name + ' mentioned you',
                 message: subject,
                 open: makeUrl(msg)
               })
