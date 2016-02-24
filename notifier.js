@@ -14,6 +14,7 @@ module.exports = function init(appName, cb) {
             actions: {
               default: 'Open'
             },
+            icon: notif.icon,
             // https://developer.gnome.org/notification-spec/#hints
             'desktop-entry': 'ssb-patchwork-electron'
           })

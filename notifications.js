@@ -1,15 +1,16 @@
 var pull = require('pull-stream')
 var mlib = require('ssb-msgs')
 var multicb = require('multicb')
+var cat = require('pull-cat')
+var fs = require('fs')
+var os = require('os')
+var http = require('http')
+var path = require('path')
+var toPull = require('stream-to-pull-stream')
 
 function truncate(str, len) {
   str = String(str)
   return str.length < len ? str : str.substr(0, len-1) + '…'
-}
-
-function getName(name) {
-  // TODO: look up petname
-  return truncate(name, 8)
 }
 
 function trimMessage(text) {
@@ -48,32 +49,145 @@ function makeUrl(msg) {
   return 'http://localhost:7777/#/msg/' + encodeURIComponent(msg.key)
 }
 
+// Get filename for a blob
+function getBlobFile(sbot, id, cb) {
+  var fileName = path.join(os.tmpdir(), id)
+  fs.exists(fileName, function (exists) {
+    if (exists) return cb(fileName)
+    sbot.blobs.want(id, function (err, has) {
+      if (!has) return cb()
+      pull(
+        sbot.blobs.get(id),
+        toPull.sink(fs.createWriteStream(fileName), function (err) {
+          cb(!err && fileName)
+        })
+      )
+    })
+  })
+}
+
+// Fetch a file from Patchwork
+function fetch(path, dest, cb) {
+  fs.exists(dest, function (exists) {
+    if (exists) return cb(dest)
+    http.request('http://localhost:7777/' + path, function (res) {
+      res.pipe(fs.createWriteStream(dest)).on('close', function () {
+        cb(dest)
+      })
+    }).on('error', function () {
+      cb()
+    }).end()
+  })
+}
+
+// Write a Patchwork icon to a file
+function getDefaultIcon(cb) {
+  fetch('img/icon.png', path.join(os.tmpdir(), 'patchwork-icon.png'), cb)
+}
+
+// Get About info for a feed.
+function getAbout(sbot, source, dest, cb) {
+  var name, image
+  pull(
+    cat([
+      // First get About info that we gave them.
+      sbot.links({
+        source: source,
+        dest: dest,
+        rel: 'about',
+        values: true,
+        reverse: true
+      }),
+      // If that isn't enough, then get About info that they gave themselves.
+      sbot.links({
+        source: dest,
+        dest: dest,
+        rel: 'about',
+        values: true,
+        reverse: true
+      }),
+    ]),
+    pull.filter(function (msg) {
+      return msg && msg.value.content && (!name || !image)
+    }),
+    pull.drain(function (msg) {
+      var c = msg.value.content
+      if (!name) {
+        name = c.name
+      }
+      if (!image) {
+        var imgLink = mlib.link(c.image, 'blob')
+        image = imgLink && imgLink.link
+      }
+    }, function (err) {
+      if (err) return cb (err)
+      if (!name) name = truncate(id, 8)
+      if (!image) gotImage()
+      else getBlobFile(sbot, image, gotImage)
+      function gotImage(path) {
+        if (!path) getDefaultIcon(gotImage2)
+        else gotImage2(path)
+      }
+      function gotImage2(path) {
+        cb(null, name, path)
+      }
+    })
+  )
+}
+
 // through stream to turn messages into notifications
-module.exports = function (sbot, id) {
+module.exports = function (sbot, myId) {
+
+  var about = {}
+  // get name and icon for a user
+  function getAboutCached(id, cb) {
+    if (id in about)
+      return cb(null, about[id])
+    getAbout(sbot, myId, id, function (err, name, image) {
+      cb(null, about[id] = {name: name, image: image})
+    })
+  }
+
   return pull(
     pull.filter(function (msg) { return msg.sync === undefined }),
     decryptPrivateMessages(sbot),
     pull.asyncMap(function notify(msg, cb) {
       var c = msg.value.content
-      if (!c || msg.value.author === id) return cb()
+      if (!c) return cb()
+
+      if (msg.value.author === myId) {
+        // update our name or image for someone
+        if (c.type == 'about') {
+          if (c.name)
+            names[c.about] = c.name
+          if (c.image)
+            images[c.about] = c.image
+        }
+        return cb()
+      }
 
       switch (c.type) {
         case 'post':
-          if (findLink(mlib.links(c.mentions), id)) {
+          if (findLink(mlib.links(c.mentions), myId)) {
             var subject = trimMessage(c.text) || 'a message'
-            var author = getName(msg.value.author)
-            return cb(null, {
-              title: author + ' mentioned you in ',
-              message: subject,
-              open: makeUrl(msg)
+            return getAboutCached(msg.value.author, function (err, about) {
+              cb(err, {
+                icon: about.image,
+                title: about.name + ' mentioned you in ',
+                message: subject,
+                open: makeUrl(msg)
+              })
             })
 
           } else if (msg.private) {
-            var author = getName(msg.value.author)
-            return cb(null, {
-              title: author + ' sent you a private message',
-              message: trimMessage(c.text),
-              open: makeUrl(msg)
+            return getAboutCached(msg.value.author, function (err, about) {
+              if (err) return cb(err)
+              cb(null, {
+                icon: about.image,
+                title: about.name + ' sent you a private message',
+                message: trimMessage(c.text),
+                open: makeUrl(msg)
+              })
             })
 
           } else if (c.root || c.branch) {
@@ -81,37 +195,43 @@ module.exports = function (sbot, id) {
             var done = multicb({ pluck: 1, spread: true })
             getMsgLink(sbot, c.root, done())
             getMsgLink(sbot, c.branch, done())
-            done(function (err, root, branch) {
+            return done(function (err, root, branch) {
               if (err) return cb(err)
               var subject
-              if (root && root.author === id)
+              if (root && root.author === myId)
                 subject = 'your thread'
-              else if (branch && branch.author === id)
+              else if (branch && branch.author === myId)
                 subject = 'your post'
               else
                 return cb()
-              var author = getName(msg.value.author)
-              cb(null, {
-                title: author + ' replied to ' + subject,
-                message: trimMessage(c.text),
-                open: makeUrl(msg)
+              getAboutCached(msg.value.author, function (err, about) {
+                if (err) return cb(err)
+                cb(null, {
+                  icon: about.image,
+                  title: about.name + ' replied to ' + subject,
+                  message: trimMessage(c.text),
+                  open: makeUrl(msg)
+                })
               })
             })
           }
           return cb()
 
         case 'contact':
-          if (c.contact === id) {
-            var name = getName(msg.value.author)
-            var action =
-              (c.following === true)  ? 'followed' :
-              (c.blocking === true)   ? 'blocked' :
-              (c.following === false) ? 'unfollowed' :
-              '???'
-            return cb(null, {
-              title: name + ' ' + action + ' you',
-              message: subject,
-              open: makeUrl(msg)
+          if (c.contact === myId) {
+            return getAboutCached(msg.value.author, function (err, about) {
+              if (err) return cb(err)
+              var action =
+                (c.following === true)  ? 'followed' :
+                (c.blocking === true)   ? 'blocked' :
+                (c.following === false) ? 'unfollowed' :
+                '???'
+              cb(null, {
+                icon: about.image,
+                title: about.name + ' ' + action + ' you',
+                message: subject,
+                open: makeUrl(msg)
+              })
             })
           }
           return cb()
@@ -124,19 +244,22 @@ module.exports = function (sbot, id) {
           if (!msgLink) return cb()
           return sbot.get(msgLink.link, function (err, subject) {
             if (err) return cb(err)
-            if (subject.author !== id) return cb()
-            var author = getName(msg.value.author)
-            var text = (subject && subject.content &&
-              trimMessage(subject.content.text) || 'this message')
-            var action =
-              (vote.value > 0) ? 'dug' :
-              (vote.value < 0) ? 'flagged' :
-              'removed their vote for'
-            var reason = vote.reason ? ' as ' + vote.reason : ''
-            cb(null, {
-              title: author + ' ' + action + ' your message' + reason,
-              message: text,
-              open: makeUrl(msg)
+            if (subject.author !== myId) return cb()
+            getAboutCached(msg.value.author, function (err, about) {
+              if (err) return cb(err)
+              var text = (subject && subject.content &&
+                trimMessage(subject.content.text) || 'this message')
+              var action =
+                (vote.value > 0) ? 'dug' :
+                (vote.value < 0) ? 'flagged' :
+                'removed their vote for'
+              var reason = vote.reason ? ' as ' + vote.reason : ''
+              cb(null, {
+                icon: about.image,
+                title: about.name + ' ' + action + ' your message' + reason,
+                message: text,
+                open: makeUrl(msg)
+              })
             })
           })
 
