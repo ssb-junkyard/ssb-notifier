@@ -15,7 +15,7 @@ function trimMessage(text) {
   return truncate(text, 140)
 }
 
-function decryptPrivateMessagess(sbot) {
+function decryptPrivateMessages(sbot) {
   return pull.asyncMap(function (msg, cb) {
     var content = msg.value && msg.value.content
     if (typeof content === 'string')
@@ -41,7 +41,7 @@ function findLink(links, id) {
 module.exports = function (sbot, id) {
   return pull(
     pull.filter(function (msg) { return msg.sync === undefined }),
-    decryptPrivateMessagess(sbot),
+    decryptPrivateMessages(sbot),
     pull.filter(function (msg) { return msg.value.content }),
     pull.asyncMap(function notify(msg, cb) {
       var c = msg.value.content
