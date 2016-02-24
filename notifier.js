@@ -11,9 +11,15 @@ module.exports = function init(appName, cb) {
           var notification = notifications.createNotification({
             summary: notif.title,
             body: notif.message,
+            actions: {
+              default: 'Open'
+            },
             // https://developer.gnome.org/notification-spec/#hints
             'desktop-entry': 'ssb-patchwork-electron'
           })
+          notification.on('action', function (action) {
+            proc.spawn('xdg-open', [notif.open], {stdio: 'inherit'}).unref()
+          });
           notification.push()
         })
       })

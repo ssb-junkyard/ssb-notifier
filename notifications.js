@@ -44,6 +44,10 @@ function getMsgLink(sbot, content, cb) {
   else cb()
 }
 
+function makeUrl(msg) {
+  return 'http://localhost:7777/#/msg/' + encodeURIComponent(msg.key)
+}
+
 // through stream to turn messages into notifications
 module.exports = function (sbot, id) {
   return pull(
@@ -60,14 +64,16 @@ module.exports = function (sbot, id) {
             var author = getName(msg.value.author)
             return cb(null, {
               title: author + ' mentioned you in ',
-              message: subject
+              message: subject,
+              open: makeUrl(msg)
             })
 
           } else if (msg.private) {
             var author = getName(msg.value.author)
             return cb(null, {
               title: author + ' sent you a private message',
-              message: trimMessage(c.text)
+              message: trimMessage(c.text),
+              open: makeUrl(msg)
             })
 
           } else if (c.root || c.branch) {
@@ -87,7 +93,8 @@ module.exports = function (sbot, id) {
               var author = getName(msg.value.author)
               cb(null, {
                 title: author + ' replied to ' + subject,
-                message: trimMessage(c.text)
+                message: trimMessage(c.text),
+                open: makeUrl(msg)
               })
             })
           }
@@ -103,7 +110,8 @@ module.exports = function (sbot, id) {
               '???'
             return cb(null, {
               title: name + ' ' + action + ' you',
-              message: subject
+              message: subject,
+              open: makeUrl(msg)
             })
           }
           return cb()
@@ -127,7 +135,8 @@ module.exports = function (sbot, id) {
             var reason = vote.reason ? ' as ' + vote.reason : ''
             cb(null, {
               title: author + ' ' + action + ' your message' + reason,
-              message: text
+              message: text,
+              open: makeUrl(msg)
             })
           })
 
