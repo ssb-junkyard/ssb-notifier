@@ -156,11 +156,15 @@ module.exports = function (sbot, myId) {
       if (!c) return cb()
 
       if (msg.value.author === myId) {
-        if (c.type == 'about') {
-          // update our name or image for someone
-          var info = about[c.about] || (about[c.about] = {})
-          if (c.name) info.name = c.name
-          if (c.image) info.image = c.image
+        if (c.type == 'about' && c.about in about) {
+          if (c.name) {
+            // update our name for someone
+            about[c.about].name = c.name
+          }
+          if (c.image) {
+            // image is more expensive to update. just invalidate the cache
+            delete about[c.about]
+          }
         }
         return cb()
       }
