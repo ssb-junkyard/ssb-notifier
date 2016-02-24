@@ -1,0 +1,25 @@
+{
+  "name": "ssb-desktop-notify",
+  "version": "0.0.0",
+  "description": "desktop notifications for ssb/patchwork",
+  "main": "notify.js",
+  "bin": "server.js",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/clehner/ssb-desktop-notify"
+  },
+  "author": "Charles Lehner (http://celehner.com/)",
+  "license": "Fair",
+  "bugs": {
+    "url": "https://github.com/clehner/ssb-desktop-notify/issues"
+  },
+  "dependencies": {
+    "freedesktop-notifications": "^1.2.1",
+    "pull-stream": "^3.1.0",
+    "ssb-client": "^3.0.0",
+    "ssb-config": "^1.1.0",
+    "ssb-keys": "^4.0.10",
+    "ssb-msgs": "^5.2.0",
+    "stream-to-pull-stream": "^1.6.6"
+  }
+}
