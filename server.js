@@ -13,7 +13,7 @@ ssbKeys.loadOrCreate(path.join(conf.path, 'secret'), function (err, keys) {
   require('ssb-client')(keys, conf, function (err, sbot) {
     if (err) throw err
     sbot.whoami(function (err, feed) {
-      if (err) return cb(err)
+      if (err) throw err
       var keepalive = setInterval(sbot.whoami, 15e3)
       require('./notifier')(appName, function (err, notify) {
         if (err) throw err
