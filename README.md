@@ -1,7 +1,7 @@
 # ssb-notifier
 
 Desktop notifications for ssb/patchwork. Generates notifications on mentions,
-digs, private messages, and follows.
+digs, private messages, replies, and follows.
 
 ## Install
 

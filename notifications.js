@@ -1,5 +1,6 @@
 var pull = require('pull-stream')
 var mlib = require('ssb-msgs')
+var multicb = require('multicb')
 
 function truncate(str, len) {
   str = String(str)
@@ -37,16 +38,22 @@ function findLink(links, id) {
       return links[i]
 }
 
+function getMsgLink(sbot, content, cb) {
+  var link = mlib.link(content, 'msg').link
+  if (link) sbot.get(link, cb)
+  else cb()
+}
+
 // through stream to turn messages into notifications
 module.exports = function (sbot, id) {
   return pull(
     pull.filter(function (msg) { return msg.sync === undefined }),
     decryptPrivateMessages(sbot),
-    pull.filter(function (msg) { return msg.value.content }),
     pull.asyncMap(function notify(msg, cb) {
       var c = msg.value.content
-      switch (c && c.type) {
+      if (!c || msg.value.author === id) return cb()
 
+      switch (c.type) {
         case 'post':
           if (findLink(mlib.links(c.mentions), id)) {
             var subject = trimMessage(c.text) || 'a message'
@@ -61,6 +68,27 @@ module.exports = function (sbot, id) {
             return cb(null, {
               title: author + ' sent you a private message',
               message: trimMessage(c.text)
+            })
+
+          } else if (c.root || c.branch) {
+            // check if this is a reply to one of our messages
+            var done = multicb({ pluck: 1, spread: true })
+            getMsgLink(sbot, c.root, done())
+            getMsgLink(sbot, c.branch, done())
+            done(function (err, root, branch) {
+              if (err) return cb(err)
+              var subject
+              if (root && root.author === id)
+                subject = 'your thread'
+              else if (branch && branch.author === id)
+                subject = 'your thread'
+              else
+                return cb()
+              var author = getName(msg.value.author)
+              cb(null, {
+                title: author + ' replied to ' + subject,
+                message: trimMessage(c.text)
+              })
             })
           }
           return cb()
@@ -85,6 +113,7 @@ module.exports = function (sbot, id) {
           if (typeof vote.value !== 'number')
             return cb()
           var msgLink = mlib.link(vote, 'msg')
+          if (!msgLink) return cb()
           return sbot.get(msgLink.link, function (err, subject) {
             if (err) return cb(err)
             if (subject.author !== id) return cb()
