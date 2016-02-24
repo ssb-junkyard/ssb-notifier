@@ -1,4 +1,4 @@
-var notifications = require('freedesktop-notifications')
+var notifier = require('node-notifier')
 var pull = require('pull-stream')
 var mlib = require('ssb-msgs')
 
@@ -17,14 +17,10 @@ function trimMessage(text) {
 }
 
 module.exports = function (sbot, appName, cb) {
-  notifications.init(function (err) {
+  sbot.whoami(function (err, feed) {
     if (err) return cb(err)
-    notifications.setAppName(appName)
-    sbot.whoami(function (err, feed) {
-      if (err) return cb(err)
-      sbot.id = feed.id
-      listenForNotifications(sbot, cb)
-    })
+    sbot.id = feed.id
+    listenForNotifications(sbot, appName, cb)
   })
 }
 
@@ -50,7 +46,7 @@ function findLink(links, id) {
       return links[i]
 }
 
-function listenForNotifications(sbot, cb) {
+function listenForNotifications(sbot, appName, cb) {
   pull(
     sbot.createLogStream({
       live: true,
@@ -69,15 +65,15 @@ function listenForNotifications(sbot, cb) {
             var subject = trimMessage(c.text) || 'a message'
             var author = getName(msg.value.author)
             return cb(null, {
-              summary: author + ' mentioned you in ',
-              body: subject
+              title: author + ' mentioned you in ',
+              message: subject
             })
 
           } else if (msg.private) {
             var author = getName(msg.value.author)
             return cb(null, {
-              summary: author + ' sent you a private message',
-              body: trimMessage(c.text)
+              title: author + ' sent you a private message',
+              message: trimMessage(c.text)
             })
           }
           return cb()
@@ -91,8 +87,8 @@ function listenForNotifications(sbot, cb) {
               (c.following === false) ? 'unfollowed' :
               '???'
             return cb(null, {
-              summary: name + ' ' + action + ' you',
-              body: subject
+              title: name + ' ' + action + ' you',
+              message: subject
             })
           }
           return cb()
@@ -114,8 +110,8 @@ function listenForNotifications(sbot, cb) {
               'removed their vote for'
             var reason = vote.reason ? ' as ' + vote.reason : ''
             cb(null, {
-              summary: author + ' ' + action + ' your message' + reason,
-              body: text
+              title: author + ' ' + action + ' your message' + reason,
+              message: text
             })
           })
 
@@ -125,10 +121,8 @@ function listenForNotifications(sbot, cb) {
     }),
     pull.drain(function (notif) {
       if (!notif) return
-      notifications.createNotification(notif).push()
-    }, function (err) {
-      notifications.purge()
-      cb(err)
-    })
+      notif.name = appName
+      notifier.notify(notif)
+    }, cb)
   )
 }

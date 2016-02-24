@@ -3,8 +3,6 @@
 Desktop notifications for ssb/patchwork. Generates notifications on mentions,
 digs, private messages, and follows.
 
-Currently supports only freedesktop.org notifications.
-
 ## Install
 
 ```
