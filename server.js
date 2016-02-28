@@ -2,6 +2,8 @@
 ':' //; exec "$(which nodejs || which node)" "$0" "$@"
 // vi: ft=javascript
 
+var lastTime = Date.now()
+
 var path = require('path')
 var ssbKeys = require('ssb-keys')
 var ssbClient = require('ssb-client')
@@ -22,6 +24,7 @@ ssbKeys.loadOrCreate(path.join(conf.path, 'secret'), function (err, keys) {
       sbot.whoami(function (err, feed) {
         if (err) throw err
         showNotifications(sbot, notify, feed.id, function (err) {
+          lastTime = Date.now()
           sbot.close(err, function (err) {
             if (err) throw err
             reconnect()
@@ -38,7 +41,7 @@ function showNotifications(sbot, notify, feedId, cb) {
     sbot.createLogStream({
       live: true,
       reverse: true,
-      gte: Date.now()
+      gte: lastTime
     }),
     require('./notifications')(sbot, feedId),
     pull.filter(Boolean),
