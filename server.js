@@ -9,47 +9,12 @@ var appName = process.env.ssb_appname || 'ssb'
 var conf = require('ssb-config/inject')(appName)
 var pull = require('pull-stream')
 
-function reconnecter(createClient, onConnection) {
-  var keepaliveInterval = 15e3
-  var rpc
-  var reconnectDelay
-  var awaitingReconnect
-
-  function keepalive() {
-    rpc.whoami(function (err, feed) {
-      if (err) connect()
-      else setTimeout(keepalive, keepaliveInterval)
-    })
-  }
-
-  function connect() {
-    reconnectDelay = 1e3
-    if (awaitingReconnect)
-      clearTimeout(awaitingReconnect)
-    function reconnect() {
-      createClient(function (err, _rpc) {
-        awaitingReconnect = null
-        if (err) {
-          awaitingReconnect = setTimeout(reconnect, reconnectDelay *= 1.618)
-        } else {
-          rpc = _rpc
-          setTimeout(keepalive, keepaliveInterval)
-          onConnection(null, rpc, connect)
-        }
-      })
-    }
-    reconnect()
-  }
-
-  connect()
-}
-
 ssbKeys.loadOrCreate(path.join(conf.path, 'secret'), function (err, keys) {
   if (err) throw err
   require('./notifier')(appName, function (err, notify) {
     if (err) throw err
 
-    reconnecter(function (cb) {
+    require('ssb-reconnect')(function (cb) {
       ssbClient(keys, conf, cb)
     }, function (err, sbot, reconnect) {
       if (err) throw err

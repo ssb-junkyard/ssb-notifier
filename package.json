@@ -23,6 +23,7 @@
     "ssb-config": "^1.1.0",
     "ssb-keys": "^4.0.10",
     "ssb-msgs": "^5.2.0",
+    "ssb-reconnect": "^0.0.0",
     "stream-to-pull-stream": "^1.6.6"
   }
 }
