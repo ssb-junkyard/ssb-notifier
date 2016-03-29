@@ -5,8 +5,17 @@ digs, private messages, replies, and follows. Works on linux and OSX, like magic
 
 ## Install
 
+From NPM:
+
 ```
 sbot plugins.install ssb-notifier
+```
+
+From Git:
+
+```
+git clone https://github.com/clehner/ssb-notifier.git ~/ssb-notifier
+sbot plugins.install ~/ssb-notifier
 ```
 
 ## License
