@@ -1,7 +1,3 @@
-#!/bin/sh
-':' //; exec "$(which nodejs || which node)" "$0" "$@"
-// vi: ft=javascript
-
 var appName = process.env.ssb_appname || 'ssb'
 var pull = require('pull-stream')
 
