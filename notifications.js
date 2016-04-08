@@ -23,10 +23,14 @@ function decryptPrivateMessages(sbot) {
     if (typeof content === 'string')
       sbot.private.unbox(content, function (err, content) {
         if (err) return cb(err)
-        msg.value.content = content
-        if (content)
-          msg.private = true
-        cb(null, msg)
+        // leave original message object intact.
+        var value = Object.create(msg.value)
+        value.content = content
+        cb(null, {
+          key: msg.key,
+          value: value,
+          private: true
+        })
       })
     else
       return cb(null, msg)
