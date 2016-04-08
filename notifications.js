@@ -153,7 +153,7 @@ module.exports = function (sbot, myId) {
     decryptPrivateMessages(sbot),
     pull.asyncMap(function notify(msg, cb) {
       var c = msg.value.content
-      if (!c) return cb()
+      if (!c || typeof c != 'object') return cb()
 
       if (msg.value.author === myId) {
         if (c.type == 'about' && c.about in about) {
@@ -269,6 +269,7 @@ module.exports = function (sbot, myId) {
         default:
           cb()
       }
-    })
+    }),
+    pull.filter(Boolean)
   )
 }

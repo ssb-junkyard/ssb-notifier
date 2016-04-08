@@ -18,7 +18,6 @@ module.exports = {
           gte: Date.now()
         }),
         require('./notifications')(sbot, sbot.id),
-        pull.filter(Boolean),
         pull.drain(notify)
       )
     })
