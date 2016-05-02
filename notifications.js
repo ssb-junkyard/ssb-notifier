@@ -19,21 +19,21 @@ function trimMessage(text) {
 
 function decryptPrivateMessages(sbot) {
   return pull.asyncMap(function (msg, cb) {
-    var content = msg.value && msg.value.content
+    var content = msg.value.content
     if (typeof content === 'string')
       sbot.private.unbox(content, function (err, content) {
-        if (err) return cb(err)
-        // leave original message object intact.
-        var value = Object.create(msg.value)
-        value.content = content
-        cb(null, {
+        if (err) throw err
+        return cb(null, {
           key: msg.key,
-          value: value,
-          private: true
+          private: true,
+          value: {
+            content: content,
+            author: msg.value.author
+          }
         })
       })
     else
-      return cb(null, msg)
+      cb(null, msg)
   })
 }
 
@@ -155,8 +155,8 @@ module.exports = function (sbot, myId) {
   return pull(
     pull.filter(function (msg) { return msg.sync === undefined }),
     decryptPrivateMessages(sbot),
-    pull.asyncMap(function notify(msg, cb) {
-      var c = msg.value.content
+    pull.asyncMap(function (msg, cb) {
+      var c = msg && msg.value.content
       if (!c || typeof c != 'object') return cb()
 
       if (msg.value.author === myId) {
@@ -236,7 +236,6 @@ module.exports = function (sbot, myId) {
               cb(null, {
                 icon: about.image,
                 title: about.name + ' ' + action + ' you',
-                message: subject,
                 open: makeUrl(msg)
               })
             })
@@ -250,11 +249,14 @@ module.exports = function (sbot, myId) {
           var msgLink = mlib.link(vote, 'msg')
           if (!msgLink) return cb()
           return sbot.get(msgLink.link, function (err, subject) {
-            if (err) return cb(err)
-            if (subject.author !== myId) return cb()
+            if (err) {
+              if (err.name == 'NotFoundError') return cb()
+              else return cb(err)
+            }
+            if (!subject || subject.author !== myId) return cb()
             getAboutCached(msg.value.author, function (err, about) {
               if (err) return cb(err)
-              var text = (subject && subject.content &&
+              var text = (subject.content &&
                 trimMessage(subject.content.text) || 'this message')
               var action =
                 (vote.value > 0) ? 'dug' :

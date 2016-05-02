@@ -18,7 +18,9 @@ module.exports = {
           gte: Date.now()
         }),
         require('./notifications')(sbot, sbot.id),
-        pull.drain(notify)
+        pull.drain(notify, function (err) {
+          console.error('[notifier]', err)
+        })
       )
     })
   }
