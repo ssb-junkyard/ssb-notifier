@@ -4,12 +4,12 @@
   "description": "desktop notifications for ssb/patchwork",
   "repository": {
     "type": "git",
-    "url": "git://github.com/clehner/ssb-notifier"
+    "url": "git://github.com/ssbc/ssb-notifier"
   },
   "author": "Charles Lehner (http://celehner.com/)",
   "license": "Fair",
   "bugs": {
-    "url": "https://github.com/clehner/ssb-notifier/issues"
+    "url": "https://github.com/ssbc/ssb-notifier/issues"
   },
   "dependencies": {
     "freedesktop-notifications": "^1.2.1",
