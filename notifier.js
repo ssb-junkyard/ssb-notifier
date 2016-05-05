@@ -5,8 +5,13 @@ module.exports = function init(appName, cb) {
       var notifications = require('freedesktop-notifications')
       var proc = require('child_process')
       return notifications.init(function (err) {
-        if (err) return cb(err)
-          notifications.setAppName(appName)
+        if (err) {
+          if (/was not provided/.test(err))
+            return cb(new Error('Notification daemon not available'))
+          else
+            return cb(err)
+        }
+        notifications.setAppName(appName)
         cb(null, function (notif) {
           var notification = notifications.createNotification({
             summary: notif.title,

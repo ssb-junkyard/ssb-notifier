@@ -10,7 +10,7 @@ module.exports = {
   },
   init: function (sbot, config) {
     require('./notifier')(appName, function (err, notify) {
-      if (err) throw err
+      if (err) return console.error('[notifier]', err.message || err)
       pull(
         sbot.createLogStream({
           live: true,
