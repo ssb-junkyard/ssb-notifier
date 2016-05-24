@@ -4,7 +4,12 @@ module.exports = function init(appName, cb) {
     case 'Linux':
       var notifications = require('freedesktop-notifications')
       var proc = require('child_process')
-      return notifications.init(function (err) {
+      try {
+        return notifications.init(inited)
+      } catch(e) {
+        return cb(e)
+      }
+      function inited(err) {
         if (err) {
           if (/was not provided/.test(err))
             return cb(new Error('Notification daemon not available'))
@@ -28,7 +33,7 @@ module.exports = function init(appName, cb) {
           });
           notification.push()
         })
-      })
+      }
 
     default:
       var notifier = require('node-notifier')
