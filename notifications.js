@@ -44,8 +44,8 @@ function findLink(links, id) {
 }
 
 function getMsgLink(sbot, content, cb) {
-  var link = mlib.link(content, 'msg').link
-  if (link) sbot.get(link, cb)
+  var link = mlib.link(content, 'msg')
+  if (link) sbot.get(link.link, cb)
   else cb()
 }
 
