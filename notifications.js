@@ -19,7 +19,7 @@ function trimMessage(text) {
 
 function decryptPrivateMessages(sbot) {
   return pull.asyncMap(function (msg, cb) {
-    var content = msg.value.content
+    var content = msg && msg.value && msg.value.content
     if (typeof content === 'string')
       sbot.private.unbox(content, function (err, content) {
         if (err) throw err
