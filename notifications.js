@@ -1,3 +1,4 @@
+'use strict'
 var pull = require('pull-stream')
 var mlib = require('ssb-msgs')
 var multicb = require('multicb')
@@ -125,7 +126,7 @@ function getAbout(sbot, source, dest, cb) {
       }
     }, function (err) {
       if (err) return cb (err)
-      if (!name) name = truncate(id, 8)
+      if (!name) name = truncate(dest, 8)
       if (!image) gotImage()
       else getBlobFile(sbot, image, gotImage)
       function gotImage(path) {
