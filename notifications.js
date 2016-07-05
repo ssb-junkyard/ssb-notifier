@@ -157,7 +157,7 @@ module.exports = function (sbot, myId) {
     pull.filter(function (msg) { return msg.sync === undefined }),
     decryptPrivateMessages(sbot),
     pull.asyncMap(function (msg, cb) {
-      var c = msg && msg.value.content
+      var c = msg && msg.value && msg.value.content
       if (!c || typeof c != 'object') return cb()
 
       if (msg.value.author === myId) {
