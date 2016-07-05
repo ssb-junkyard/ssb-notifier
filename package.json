@@ -1,6 +1,6 @@
 {
   "name": "ssb-notifier",
-  "version": "2.0.5",
+  "version": "2.0.6",
   "description": "desktop notifications for ssb/patchwork",
   "repository": {
     "type": "git",
