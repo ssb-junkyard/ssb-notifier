@@ -9,6 +9,8 @@ var http = require('http')
 var path = require('path')
 var toPull = require('stream-to-pull-stream')
 
+var defaultIcon = '&qjeAs8+uMXLlyovT4JnEpMwTNDx/QXHfOl2nv2u0VCM=.sha256'
+
 function truncate(str, len) {
   str = String(str)
   return str.length < len ? str : str.substr(0, len-1) + '…'
@@ -71,25 +73,6 @@ function getBlobFile(sbot, id, cb) {
   })
 }
 
-// Fetch a file from Patchwork
-function fetch(path, dest, cb) {
-  fs.exists(dest, function (exists) {
-    if (exists) return cb(dest)
-    http.request('http://localhost:7777/' + path, function (res) {
-      res.pipe(fs.createWriteStream(dest)).on('close', function () {
-        cb(dest)
-      })
-    }).on('error', function () {
-      cb()
-    }).end()
-  })
-}
-
-// Write a Patchwork icon to a file
-function getDefaultIcon(cb) {
-  fetch('img/icon.png', path.join(os.tmpdir(), 'patchwork-icon.png'), cb)
-}
-
 // Get About info for a feed.
 function getAbout(sbot, source, dest, cb) {
   var name, image
@@ -127,15 +110,9 @@ function getAbout(sbot, source, dest, cb) {
     }, function (err) {
       if (err) return cb (err)
       if (!name) name = truncate(dest, 8)
-      if (!image) gotImage()
-      else getBlobFile(sbot, image, gotImage)
-      function gotImage(path) {
-        if (!path) getDefaultIcon(gotImage2)
-        else gotImage2(path)
-      }
-      function gotImage2(path) {
+      getBlobFile(sbot, image || defaultIcon, function (path) {
         cb(null, name, path)
-      }
+      })
     })
   )
 }
