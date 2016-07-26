@@ -12,11 +12,7 @@ module.exports = {
     require('./notifier')(appName, function (err, notify) {
       if (err) return console.error('[notifier]', err.message || err)
       pull(
-        sbot.createLogStream({
-          live: true,
-          reverse: true,
-          gte: Date.now()
-        }),
+        sbot.createLogStream({old: false})
         require('./notifications')(sbot, sbot.id),
         pull.drain(notify, function (err) {
           console.error('[notifier]', err)
