@@ -8,6 +8,7 @@ var os = require('os')
 var http = require('http')
 var path = require('path')
 var toPull = require('stream-to-pull-stream')
+var getAbout = require('ssb-avatar')
 
 var defaultIcon = '&qjeAs8+uMXLlyovT4JnEpMwTNDx/QXHfOl2nv2u0VCM=.sha256'
 
@@ -98,51 +99,6 @@ function getName(sbot, sources, dest, cb) {
   )
 }
 
-// Get About info for a feed.
-function getAbout(sbot, source, dest, cb) {
-  var name, image
-  pull(
-    cat([
-      // First get About info that we gave them.
-      sbot.links({
-        source: source,
-        dest: dest,
-        rel: 'about',
-        values: true,
-        reverse: true
-      }),
-      // If that isn't enough, then get About info that they gave themselves.
-      sbot.links({
-        source: dest,
-        dest: dest,
-        rel: 'about',
-        values: true,
-        reverse: true
-      }),
-    ]),
-    pull.filter(function (msg) {
-      return msg && msg.value.content && (!name || !image)
-    }),
-    pull.drain(function (msg) {
-      var c = msg.value.content
-      if (!name) {
-        name = c.name
-      }
-      if (!image) {
-        var imgLink = mlib.link(c.image, 'blob')
-        image = imgLink && imgLink.link
-      }
-    }, function (err) {
-      if (err) return cb (err)
-      if (!name) name = truncate(dest, 8)
-      getBlobFile(sbot, image || defaultIcon, function (err, path) {
-        if (err) return cb(err)
-        cb(null, name, path)
-      })
-    })
-  )
-}
-
 // through stream to turn messages into notifications
 module.exports = function (sbot, myId) {
 
@@ -151,8 +107,12 @@ module.exports = function (sbot, myId) {
   function getAboutCached(id, cb) {
     if (id in about)
       return cb(null, about[id])
-    getAbout(sbot, myId, id, function (err, name, image) {
-      cb(null, about[id] = {name: name, image: image})
+    getAbout(sbot, myId, id, function (err, about) {
+      if (err) return cb(err)
+      getBlobFile(sbot, about.image || defaultIcon, function (err, path) {
+        if (err) return cb(err)
+        cb(null, about[id] = {name: name, image: path})
+      })
     })
   }
 
