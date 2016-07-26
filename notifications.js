@@ -58,15 +58,16 @@ function makeUrl(msg) {
 
 // Get filename for a blob
 function getBlobFile(sbot, id, cb) {
-  var fileName = path.join(os.tmpdir(), id)
+  var fileName = path.join(os.tmpdir(), encodeURIComponent(id))
   fs.exists(fileName, function (exists) {
-    if (exists) return cb(fileName)
+    if (exists) return cb(null, fileName)
     sbot.blobs.want(id, function (err, has) {
-      if (!has) return cb()
-      pull(
+      if (err) cb(err)
+      else if (!has) cb()
+      else pull(
         sbot.blobs.get(id),
         toPull.sink(fs.createWriteStream(fileName), function (err) {
-          cb(!err && fileName)
+          cb(err, fileName)
         })
       )
     })
@@ -134,7 +135,8 @@ function getAbout(sbot, source, dest, cb) {
     }, function (err) {
       if (err) return cb (err)
       if (!name) name = truncate(dest, 8)
-      getBlobFile(sbot, image || defaultIcon, function (path) {
+      getBlobFile(sbot, image || defaultIcon, function (err, path) {
+        if (err) return cb(err)
         cb(null, name, path)
       })
     })
