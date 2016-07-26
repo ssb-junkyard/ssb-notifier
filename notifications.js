@@ -8,7 +8,7 @@ var os = require('os')
 var http = require('http')
 var path = require('path')
 var toPull = require('stream-to-pull-stream')
-var getAbout = require('ssb-avatar')
+var getAvatar = require('ssb-avatar')
 
 var defaultIcon = '&qjeAs8+uMXLlyovT4JnEpMwTNDx/QXHfOl2nv2u0VCM=.sha256'
 
@@ -102,16 +102,13 @@ function getName(sbot, sources, dest, cb) {
 // through stream to turn messages into notifications
 module.exports = function (sbot, myId) {
 
-  var about = {}
   // get name and icon for a user
-  function getAboutCached(id, cb) {
-    if (id in about)
-      return cb(null, about[id])
-    getAbout(sbot, myId, id, function (err, about) {
+  function getAbout(id, cb) {
+    getAvatar(sbot, myId, id, function (err, about) {
       if (err) return cb(err)
       getBlobFile(sbot, about.image || defaultIcon, function (err, path) {
         if (err) return cb(err)
-        cb(null, about[id] = {name: name, image: path})
+        cb(null, {name: about.name, image: path})
       })
     })
   }
@@ -123,25 +120,14 @@ module.exports = function (sbot, myId) {
       var c = msg && msg.value && msg.value.content
       if (!c || typeof c != 'object') return cb()
 
-      if (msg.value.author === myId) {
-        if (c.type == 'about' && c.about in about) {
-          if (c.name) {
-            // update our name for someone
-            about[c.about].name = c.name
-          }
-          if (c.image) {
-            // image is more expensive to update. just invalidate the cache
-            delete about[c.about]
-          }
-        }
-        return cb()
-      }
+      // ignore own messages
+      if (msg.value.author === myId) return cb()
 
       switch (c.type) {
         case 'post':
           if (findLink(mlib.links(c.mentions), myId)) {
             var subject = trimMessage(c.text) || 'a message'
-            return getAboutCached(msg.value.author, function (err, about) {
+            return getAbout(msg.value.author, function (err, about) {
               cb(err, {
                 icon: about.image,
                 title: about.name + ' mentioned you',
@@ -151,7 +137,7 @@ module.exports = function (sbot, myId) {
             })
 
           } else if (msg.private) {
-            return getAboutCached(msg.value.author, function (err, about) {
+            return getAbout(msg.value.author, function (err, about) {
               if (err) return cb(err)
               cb(null, {
                 icon: about.image,
@@ -175,7 +161,7 @@ module.exports = function (sbot, myId) {
                 subject = 'your post'
               else
                 return cb()
-              getAboutCached(msg.value.author, function (err, about) {
+              getAbout(msg.value.author, function (err, about) {
                 if (err) return cb(err)
                 cb(null, {
                   icon: about.image,
@@ -190,7 +176,7 @@ module.exports = function (sbot, myId) {
 
         case 'contact':
           if (c.contact === myId) {
-            return getAboutCached(msg.value.author, function (err, about) {
+            return getAbout(msg.value.author, function (err, about) {
               if (err) return cb(err)
               var action =
                 (c.following === true)  ? 'followed' :
@@ -218,7 +204,7 @@ module.exports = function (sbot, myId) {
               else return cb(err)
             }
             if (!subject || subject.author !== myId) return cb()
-            getAboutCached(msg.value.author, function (err, about) {
+            getAbout(msg.value.author, function (err, about) {
               if (err) return cb(err)
               var text = (subject.content &&
                 trimMessage(subject.content.text) || 'this message')
@@ -242,7 +228,7 @@ module.exports = function (sbot, myId) {
             if (err) return cb(err)
             if (repo.author !== myId) return cb()
             var done = multicb({ pluck: 1, spread: true })
-            getAboutCached(msg.value.author, done())
+            getAbout(msg.value.author, done())
             getName(sbot, [myId, msg.value.author, null], c.repo, done())
             done(function (err, author, repoName) {
               if (err) return cb(err)
