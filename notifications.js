@@ -73,6 +73,30 @@ function getBlobFile(sbot, id, cb) {
   })
 }
 
+// Get a name for a thing from multiple fallback sources
+function getName(sbot, sources, dest, cb) {
+  var name
+  pull(
+    cat(sources.map(function (source) {
+      return sbot.links({
+        source: source,
+        dest: dest,
+        rel: 'about',
+        values: true,
+        keys: false,
+        meta: false,
+        reverse: true
+      })
+    })),
+    pull.drain(function (link) {
+      name = msg.value.content.name
+      if (name) return false
+    }, function (err) {
+      cb(err, name)
+    })
+  )
+}
+
 // Get About info for a feed.
 function getAbout(sbot, source, dest, cb) {
   var name, image
@@ -245,6 +269,27 @@ module.exports = function (sbot, myId) {
                 icon: about.image,
                 title: about.name + ' ' + action + ' your message' + reason,
                 message: text,
+                open: makeUrl(msg)
+              })
+            })
+          })
+
+        case 'pull-request':
+        case 'issue':
+          return sbot.get(c.repo || c.project, function (err, repo) {
+            if (err) return cb(err)
+            if (repo.author !== myId) return cb()
+            var done = multicb({ pluck: 1, spread: true })
+            getAboutCached(msg.value.author, done())
+            getName(sbot, [myId, msg.value.author, null], c.repo, done())
+            done(function (err, author, repoName) {
+              if (err) return cb(err)
+              var what = c.type === 'issue' ? 'an issue' : 'a pull request'
+              var dest = repoName || truncate(c.repo, 16)
+              cb(null, {
+                icon: author.image,
+                title: author.name + ' opened ' + what + ' on ' + dest,
+                message: trimMessage(c.text),
                 open: makeUrl(msg)
               })
             })
