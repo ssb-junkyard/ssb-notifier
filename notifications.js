@@ -229,7 +229,7 @@ module.exports = function (sbot, myId) {
             if (repo.author !== myId) return cb()
             var done = multicb({ pluck: 1, spread: true })
             getAbout(msg.value.author, done())
-            getName(sbot, [myId, msg.value.author, null], c.repo, done())
+            getName(sbot, [myId, repo.author, null], c.repo, done())
             done(function (err, author, repoName) {
               if (err) return cb(err)
               var what = c.type === 'issue' ? 'an issue' : 'a pull request'
