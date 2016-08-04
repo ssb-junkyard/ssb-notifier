@@ -90,8 +90,8 @@ function getName(sbot, sources, dest, cb) {
         reverse: true
       })
     })),
-    pull.drain(function (link) {
-      name = msg.value.content.name
+    pull.drain(function (msg) {
+      name = msg && msg.value && msg.value.content && msg.value.content.name
       if (name) return false
     }, function (err) {
       cb(err, name)
