@@ -90,11 +90,11 @@ function getName(sbot, sources, dest, cb) {
         reverse: true
       })
     })),
-    pull.drain(function (msg) {
-      name = msg && msg.value && msg.value.content && msg.value.content.name
+    pull.drain(function (value) {
+      name = value && value.content && value.content.name
       if (name) return false
     }, function (err) {
-      cb(err, name)
+      cb(err === true ? null : err, name)
     })
   )
 }
