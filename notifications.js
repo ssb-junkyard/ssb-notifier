@@ -5,7 +5,6 @@ var multicb = require('multicb')
 var cat = require('pull-cat')
 var fs = require('fs')
 var os = require('os')
-var http = require('http')
 var path = require('path')
 var toPull = require('stream-to-pull-stream')
 var getAvatar = require('ssb-avatar')
@@ -13,32 +12,41 @@ var getAvatar = require('ssb-avatar')
 var defaultIcon = '&qjeAs8+uMXLlyovT4JnEpMwTNDx/QXHfOl2nv2u0VCM=.sha256'
 
 function truncate(str, len) {
+  if (!str) return ''
   str = String(str)
   return str.length < len ? str : str.substr(0, len-1) + '…'
 }
 
-function trimMessage(text) {
-  return truncate(text, 140)
+function trimMessage(msg) {
+  var text = msg.value.content.text
+  // Should private messages be shortened, for privacy?
+  return truncate(text, 255)
+}
+
+function decryptPrivateMessage(sbot, msg, cb) {
+  var content = msg && msg.value && msg.value.content
+  if (typeof content === 'string' && content.slice(-4) === '.box')
+    sbot.private.unbox(content, function (err, content) {
+      if (err && err.message === 'failed to decrypt') err = null
+      if (err || !content) return cb(err)
+      return cb(null, {
+        key: msg.key,
+        private: true,
+        value: {
+          content: content,
+          author: msg.value.author
+        }
+      })
+    })
+  else
+    cb(null, msg)
 }
 
 function decryptPrivateMessages(sbot) {
-  return pull.asyncMap(function (msg, cb) {
-    var content = msg && msg.value && msg.value.content
-    if (typeof content === 'string')
-      sbot.private.unbox(content, function (err, content) {
-        if (err) throw err
-        return cb(null, {
-          key: msg.key,
-          private: true,
-          value: {
-            content: content,
-            author: msg.value.author
-          }
-        })
-      })
-    else
-      cb(null, msg)
-  })
+  return pull(
+    pull.asyncMap(decryptPrivateMessage.bind(this, sbot)),
+    pull.filter()
+  )
 }
 
 function findLink(links, id) {
@@ -47,9 +55,16 @@ function findLink(links, id) {
       return links[i]
 }
 
-function getMsgLink(sbot, content, cb) {
+function getMsg(sbot, key, cb) {
+  sbot.get(key, function (err, value) {
+    if (err) return cb(err)
+    else decryptPrivateMessage(sbot, {key: key, value: value}, cb)
+  })
+}
+
+function getLinkedMsg(sbot, content, cb) {
   var link = mlib.link(content, 'msg')
-  if (link) sbot.get(link.link, cb)
+  if (link) getMsg(sbot, link.link, cb)
   else cb()
 }
 
@@ -126,7 +141,7 @@ module.exports = function (sbot, myId) {
       switch (c.type) {
         case 'post':
           if (findLink(mlib.links(c.mentions), myId)) {
-            var subject = trimMessage(c.text) || 'a message'
+            var subject = trimMessage(msg) || 'a message'
             return getAbout(msg.value.author, function (err, about) {
               cb(err, {
                 icon: about.image,
@@ -142,7 +157,7 @@ module.exports = function (sbot, myId) {
               cb(null, {
                 icon: about.image,
                 title: about.name + ' sent you a private message',
-                message: trimMessage(c.text),
+                message: trimMessage(msg),
                 open: makeUrl(msg)
               })
             })
@@ -150,14 +165,14 @@ module.exports = function (sbot, myId) {
           } else if (c.root || c.branch) {
             // check if this is a reply to one of our messages
             var done = multicb({ pluck: 1, spread: true })
-            getMsgLink(sbot, c.root, done())
-            getMsgLink(sbot, c.branch, done())
+            getLinkedMsg(sbot, c.root, done())
+            getLinkedMsg(sbot, c.branch, done())
             return done(function (err, root, branch) {
               if (err) return cb(err)
               var subject
-              if (root && root.author === myId)
+              if (root && root.value.author === myId)
                 subject = 'your thread'
-              else if (branch && branch.author === myId)
+              else if (branch && branch.value.author === myId)
                 subject = 'your post'
               else
                 return cb()
@@ -166,7 +181,7 @@ module.exports = function (sbot, myId) {
                 cb(null, {
                   icon: about.image,
                   title: about.name + ' replied to ' + subject,
-                  message: trimMessage(c.text),
+                  message: trimMessage(msg),
                   open: makeUrl(msg)
                 })
               })
@@ -196,27 +211,25 @@ module.exports = function (sbot, myId) {
           var vote = c.vote
           if (typeof vote.value !== 'number')
             return cb()
-          var msgLink = mlib.link(vote, 'msg')
-          if (!msgLink) return cb()
-          return sbot.get(msgLink.link, function (err, subject) {
+          return getLinkedMsg(sbot, vote, function (err, subject) {
             if (err) {
               if (err.name == 'NotFoundError') return cb()
               else return cb(err)
             }
-            if (!subject || subject.author !== myId) return cb()
+            if (!subject || subject.value.author !== myId) return cb()
             getAbout(msg.value.author, function (err, about) {
               if (err) return cb(err)
-              var text = (subject.content &&
-                trimMessage(subject.content.text) || 'this message')
               var action =
                 (vote.value > 0) ? 'dug' :
                 (vote.value < 0) ? 'flagged' :
                 'removed their vote for'
               var reason = vote.reason ? ' as ' + vote.reason : ''
+              var target = subject.private ? 'private message' : 'message'
               cb(null, {
                 icon: about.image,
-                title: about.name + ' ' + action + ' your message' + reason,
-                message: text,
+                title: about.name + ' ' + action + ' your ' + target
+                  + ' ' + reason,
+                message: trimMessage(subject),
                 open: makeUrl(msg)
               })
             })
@@ -224,12 +237,12 @@ module.exports = function (sbot, myId) {
 
         case 'pull-request':
         case 'issue':
-          return sbot.get(c.repo || c.project, function (err, repo) {
+          return getLinkedMsg(sbot, c.repo || c.project, function (err, repo) {
             if (err) return cb(err)
-            if (repo.author !== myId) return cb()
+            if (repo.value.author !== myId) return cb()
             var done = multicb({ pluck: 1, spread: true })
             getAbout(msg.value.author, done())
-            getName(sbot, [myId, repo.author, null], c.repo, done())
+            getName(sbot, [myId, repo.value.author, null], c.repo, done())
             done(function (err, author, repoName) {
               if (err) return cb(err)
               var what = c.type === 'issue' ? 'an issue' : 'a pull request'
@@ -237,7 +250,7 @@ module.exports = function (sbot, myId) {
               cb(null, {
                 icon: author.image,
                 title: author.name + ' opened ' + what + ' on ' + dest,
-                message: trimMessage(c.text),
+                message: trimMessage(msg),
                 open: makeUrl(msg)
               })
             })
