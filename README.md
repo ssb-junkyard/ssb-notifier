@@ -14,7 +14,7 @@ sbot plugins.install ssb-notifier
 From Git:
 
 ```
-git clone https://github.com/ssbc/ssb-notifier.git ~/ssb-notifier
+git clone ssb://%A2FOQ9DDID+M3qAUnocWXcMakckyvUr+QArf66Y4LT0=.sha256 ~/ssb-notifier
 sbot plugins.install ~/ssb-notifier
 ```
 
