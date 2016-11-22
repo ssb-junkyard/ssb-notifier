@@ -7,14 +7,15 @@ module.exports = {
   manifest: {
     notify: 'sync'
   },
-  init: function (sbot, config, opts) {
-    var logOpts = {live: true}
-    if (opts && !isNaN(opts.recent)) {
-      logOpts.gte = Date.now() - opts.recent
-    } else {
-      logOpts.old = false
-    }
+  init: function (sbot, config, cb) {
     var notify
+    var conf = config && config.notifier || {}
+    var logOpts = {old: false}
+    if (!isNaN(conf.recent)) {
+      logOpts.old = true
+      logOpts.gte = Date.now() - conf.recent
+    }
+
     require('./notifier')(appName, function (err, _notify) {
       if (err) return console.error('[notifier]', err.message || err)
       notify = _notify
@@ -22,7 +23,8 @@ module.exports = {
         sbot.createLogStream(logOpts),
         require('./notifications')(sbot, sbot.id),
         pull.drain(notify, function (err) {
-          console.error('[notifier]', err)
+          if (cb) cb(err)
+          else console.error('[notifier]', err)
         })
       )
     })

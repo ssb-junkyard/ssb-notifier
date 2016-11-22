@@ -7,6 +7,11 @@ require('ssb-client')(process.env.ssb_appname, function (err, sbot) {
     sbot.id = feed.id
     var hrs = Number(process.argv[2]) || 1
     console.log('Loading notifications from the past ' + hrs + ' hours')
-    require('.').init(sbot, null, {recent: hrs*3600*1000})
+    require('.').init(sbot, {notifier: {
+      recent: hrs*3600*1000
+    }}, function (err) {
+      if (err) throw err
+      process.exit(0)
+    })
   })
 })
