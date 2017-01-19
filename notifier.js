@@ -2,12 +2,12 @@ module.exports = function init(appName, cb) {
   switch (require('os').type()) {
 
     case 'Linux':
-      var notifications = require('freedesktop-notifications')
       var proc = require('child_process')
+      var notifications = require('freedesktop-notifications')
       try {
         return notifications.init(inited)
       } catch(e) {
-        return cb(e)
+	// fallthrough
       }
       function inited(err) {
         if (err) {
