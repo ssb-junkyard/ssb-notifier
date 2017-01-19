@@ -57,7 +57,8 @@ function findLink(links, id) {
 
 function getMsg(sbot, key, cb) {
   sbot.get(key, function (err, value) {
-    if (err) return cb(err)
+    if (err && err.name === 'NotFoundError') return cb()
+    else if (err) return cb(err)
     else decryptPrivateMessage(sbot, {key: key, value: value}, cb)
   })
 }
@@ -239,7 +240,7 @@ module.exports = function (sbot, myId) {
         case 'issue':
           return getLinkedMsg(sbot, c.repo || c.project, function (err, repo) {
             if (err) return cb(err)
-            if (repo.value.author !== myId) return cb()
+            if (!repo || repo.value.author !== myId) return cb()
             var done = multicb({ pluck: 1, spread: true })
             getAbout(msg.value.author, done())
             getName(sbot, [myId, repo.value.author, null], c.repo, done())
