@@ -51,7 +51,7 @@ function getMsgLink(sbot, content, cb) {
 }
 
 function makeUrl(msg) {
-  return 'http://localhost:7777/#/msg/' + encodeURIComponent(msg.key)
+  return 'http://localhost:7777/#msg/' + encodeURIComponent(msg.key)
 }
 
 // Get filename for a blob
