@@ -11,7 +11,7 @@
   "dependencies": {
     "freedesktop-notifications": "^1.2.1",
     "multicb": "^1.2.1",
-    "node-notifier": "^4.5.0",
+    "node-notifier": "^5.1.2",
     "pull-cat": "^1.1.8",
     "pull-stream": "^3.1.0",
     "ssb-avatar": "^0.1.0",
