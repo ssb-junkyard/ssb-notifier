@@ -124,7 +124,7 @@ module.exports = function (sbot, myId) {
       if (err) return cb(err)
       getBlobFile(sbot, about.image || defaultIcon, function (err, path) {
         if (err) return cb(err)
-        cb(null, {name: about.name, image: path})
+        cb(null, {name: about.name || truncate(id, 8), image: path})
       })
     })
   }
