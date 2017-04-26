@@ -210,7 +210,7 @@ module.exports = function (sbot, myId) {
 
         case 'vote':
           var vote = c.vote
-          if (typeof vote.value !== 'number')
+          if (!vote || typeof vote.value !== 'number')
             return cb()
           return getLinkedMsg(sbot, vote, function (err, subject) {
             if (err) {
