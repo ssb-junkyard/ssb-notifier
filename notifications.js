@@ -25,7 +25,7 @@ function trimMessage(msg) {
 
 function decryptPrivateMessage(sbot, msg, cb) {
   var content = msg && msg.value && msg.value.content
-  if (typeof content === 'string' && content.slice(-4) === '.box')
+  if (sbot.private && typeof content === 'string' && content.slice(-4) === '.box')
     sbot.private.unbox(content, function (err, content) {
       if (err && err.message === 'failed to decrypt') err = null
       if (err || !content) return cb(err)
