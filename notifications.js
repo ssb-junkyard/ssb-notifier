@@ -23,6 +23,10 @@ function trimMessage(msg) {
   return truncate(text, 255)
 }
 
+function isNotFoundError(err) {
+  return err.notFound || err.name === 'NotFoundError'
+}
+
 function decryptPrivateMessage(sbot, msg, cb) {
   var content = msg && msg.value && msg.value.content
   if (sbot.private && typeof content === 'string' && content.slice(-4) === '.box')
@@ -57,7 +61,7 @@ function findLink(links, id) {
 
 function getMsg(sbot, key, cb) {
   sbot.get(key, function (err, value) {
-    if (err && err.name === 'NotFoundError') return cb()
+    if (err && isNotFoundError(err)) return cb()
     else if (err) return cb(err)
     else decryptPrivateMessage(sbot, {key: key, value: value}, cb)
   })
@@ -124,7 +128,7 @@ module.exports = function (sbot, myId) {
       if (err) return cb(err)
       getBlobFile(sbot, about.image || defaultIcon, function (err, path) {
         if (err) return cb(err)
-        cb(null, {name: about.name, image: path})
+        cb(null, {name: about.name || truncate(id, 8), image: path})
       })
     })
   }
@@ -210,11 +214,11 @@ module.exports = function (sbot, myId) {
 
         case 'vote':
           var vote = c.vote
-          if (typeof vote.value !== 'number')
+          if (!vote || typeof vote.value !== 'number')
             return cb()
           return getLinkedMsg(sbot, vote, function (err, subject) {
             if (err) {
-              if (err.name == 'NotFoundError') return cb()
+              if (isNotFoundError(err)) return cb()
               else return cb(err)
             }
             if (!subject || subject.value.author !== myId) return cb()
