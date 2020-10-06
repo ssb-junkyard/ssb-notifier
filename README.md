@@ -1,7 +1,7 @@
 # Current version
 
 Please see: 
-https://git.scuttlebot.io/%A2FOQ9DDID%2BM3qAUnocWXcMakckyvUr%2BQArf66Y4LT0%3D.sha256
+https://git.scuttlebot.io/%25A2FOQ9DDID%2BM3qAUnocWXcMakckyvUr%2BQArf66Y4LT0%3D.sha256
 ssb://%A2FOQ9DDID+M3qAUnocWXcMakckyvUr+QArf66Y4LT0=.sha256
 
 ---
